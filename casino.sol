@@ -17,6 +17,7 @@ contract DecentralizedCasino {
     }
 
     function ownerDeposit() public payable {
+        require(msg.value > 0, "Must deposit some ETH");
         require(msg.sender == owner, "Only owner can deposit funds");
     }
 

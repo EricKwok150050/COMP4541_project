@@ -4,48 +4,265 @@
     <meta charset="UTF-8">
     <title>Decentralized Casino</title>
     <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+    <script type="module">
+        //A Wallet Client is an interface to interact with Ethereum Accounts.
+        //The createWalletClient function sets up a Wallet Client with a given medium.
+        import {
+          createWalletClient,
+          custom,
+          getContract,
+        } from "https://esm.sh/viem";
+        import { sepolia } from "https://esm.sh/viem/chains";
+    </script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background-color: #ffcc00;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin: 5px;
+            border-radius: 5px;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background-color: #e6b800;
+        }
+
+        #owner-section {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #222;
+            border-radius: 10px;
+            display: none;
+        }
+
+        p {
+            font-size: 1.2rem;
+            margin-top: 15px;
+        }
+    </style>
 </head>
 <body>
-    <h1>Decentralized Casino</h1>
+    <h1>🎲 Decentralized Casino 🎲</h1>
+
+    <p id="account-info">Connecting...</p>
+
     <button onclick="deposit()">Deposit 0.1 ETH</button>
     <button onclick="bet()">Bet 0.05 ETH</button>
     <button onclick="withdraw()">Withdraw Earnings</button>
+
+    <div id="owner-section">
+        <h2>🏆 Owner Controls 🏆</h2>
+        <button onclick="ownerDeposit()">Owner Deposit 1 ETH</button>
+        <button onclick="ownerWithdraw()">Owner Withdraw 1 ETH</button>
+    </div>
+
     <p id="status"></p>
 
     <script>
-        const contractAddress = "YOUR_SMART_CONTRACT_ADDRESS";
-        const contractABI = [/* ABI goes here */];
+        // const onboarding = new MetaMaskOnboarding();
+        // onboarding.startOnboarding();
+        const contractAddress = "0xA6b455c8d8D7a9c433B7A821c8d254D1b4EB5700";
+        const contractABI = [
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			}
+		],
+		"name": "bet",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "bool",
+				"name": "won",
+				"type": "bool"
+			}
+		],
+		"name": "BetResult",
+		"type": "event"
+	},
+	{
+		"inputs": [],
+		"name": "deposit",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "ownerDeposit",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			}
+		],
+		"name": "ownerWithdraw",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			}
+		],
+		"name": "withdraw",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "balances",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "owner",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+];
+        // const provider = new ethers.providers.Web3Provider(window.ethereum);
+        // const signer = provider.getSigner();
+        let casino, userAccount, ownerAccount;
 
         async function connectWeb3() {
             if (window.ethereum) {
                 window.web3 = new Web3(window.ethereum);
                 await window.ethereum.request({ method: "eth_requestAccounts" });
-                return new window.web3.eth.Contract(contractABI, contractAddress);
+
+                casino = new web3.eth.Contract(contractABI, contractAddress);
+                const accounts = await web3.eth.getAccounts();
+                userAccount = accounts[0];
+
+                ownerAccount = await casino.methods.owner().call();
+                
+                document.getElementById("account-info").innerText = `Connected: ${userAccount}`;
+
+                if (userAccount.toLowerCase() === ownerAccount.toLowerCase()) {
+                    document.getElementById("owner-section").style.display = "block";
+                }
+
+                listenForEvents();
             } else {
                 alert("Please install MetaMask!");
             }
         }
 
         async function deposit() {
-            const casino = await connectWeb3();
-            const accounts = await web3.eth.getAccounts();
-            await casino.methods.deposit().send({ from: accounts[0], value: web3.utils.toWei("0.1", "ether") });
+            await casino.methods.deposit().send({ from: userAccount, value: web3.utils.toWei("0.1", "ether") });
             document.getElementById("status").innerText = "Deposit successful!";
         }
 
         async function bet() {
-            const casino = await connectWeb3();
-            const accounts = await web3.eth.getAccounts();
-            await casino.methods.bet(web3.utils.toWei("0.05", "ether")).send({ from: accounts[0] });
+            await casino.methods.bet(web3.utils.toWei("0.05", "ether")).send({ from: userAccount });
             document.getElementById("status").innerText = "Bet placed!";
         }
 
         async function withdraw() {
-            const casino = await connectWeb3();
-            const accounts = await web3.eth.getAccounts();
-            await casino.methods.withdraw(web3.utils.toWei("0.05", "ether")).send({ from: accounts[0] });
+            await casino.methods.withdraw(web3.utils.toWei("0.05", "ether")).send({ from: userAccount });
             document.getElementById("status").innerText = "Withdrawal successful!";
         }
+
+        async function ownerDeposit() {
+            await casino.methods.ownerDeposit().send({ from: ownerAccount, value: web3.utils.toWei("1", "ether") });
+            document.getElementById("status").innerText = "Owner deposit successful!";
+        }
+
+        async function ownerWithdraw() {
+            await casino.methods.ownerWithdraw(web3.utils.toWei("1", "ether")).send({ from: ownerAccount });
+            document.getElementById("status").innerText = "Owner withdrawal successful!";
+        }
+
+        async function listenForEvents() {
+            casino.events.BetResult({}, (error, event) => {
+                if (error) {
+                    console.error("Event listening error:", error);
+                    return;
+                }
+
+                const { user, amount, won } = event.returnValues;
+                let resultMessage = `User ${user} bet ${web3.utils.fromWei(amount, "ether")} ETH and `;
+                resultMessage += won ? "WON!" : "LOST!";
+                
+                document.getElementById("status").innerText = resultMessage;
+            });
+        }
+
+        connectWeb3();
     </script>
 </body>
 </html>
