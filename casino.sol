@@ -19,21 +19,23 @@ contract DecentralizedCasino {
     function ownerDeposit() public payable {
         require(msg.value > 0, "Must deposit some ETH");
         require(msg.sender == owner, "Only owner can deposit funds");
+        balances[owner] += msg.value;
     }
 
     function bet(uint256 amount) public {
         require(balances[msg.sender] >= amount, "Insufficient balance");
         require(address(this).balance >= amount * 2, "Casino cannot cover the bet");
 
-        bool won = (block.timestamp % 2 == 0); // Simple 50/50 randomness
+        uint256 randomNum = uint256(blockhash(block.number - 1)) % 2;
+        bool won = (randomNum == 1);
+
+        emit BetResult(msg.sender, amount, won);
+
         if (won) {
             balances[msg.sender] += amount;
-            payable(msg.sender).transfer(amount * 2);
         } else {
             balances[msg.sender] -= amount;
         }
-        
-        emit BetResult(msg.sender, amount, won);
     }
 
     function withdraw(uint256 amount) public {
@@ -44,7 +46,8 @@ contract DecentralizedCasino {
 
     function ownerWithdraw(uint256 amount) public {
         require(msg.sender == owner, "Only owner can withdraw");
-        require(address(this).balance >= amount, "Insufficient contract balance");
+        require(balances[owner] >= amount, "Insufficient contract balance");
+        balances[owner] -= amount;
         payable(owner).transfer(amount);
     }
 }

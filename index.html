@@ -147,7 +147,7 @@
     <p id="status"></p>
 
     <script>
-        const contractAddress = "0xA6b455c8d8D7a9c433B7A821c8d254D1b4EB5700";
+        const contractAddress = "0xFb67d681aa7bBCFA7501E17Cd7e0B76aE0c7de70";
         const contractABI = [
 	{
 		"inputs": [
@@ -295,10 +295,11 @@
 
         async function updateBalances() {
             const userBalance = await casino.methods.balances(userAccount).call();
-            const contractBalance = await web3.eth.getBalance(contractAddress);
+            const ownerBalance = await casino.methods.balances(ownerAccount).call();
+            //const contractBalance = await web3.eth.getBalance(contractAddress);
 
             document.getElementById("user-balance").innerText = `Your Balance: ${web3.utils.fromWei(userBalance, "Gwei")} Gwei`;
-            document.getElementById("contract-balance").innerText = `Casino Balance: ${web3.utils.fromWei(contractBalance, "Gwei")} Gwei`;
+            document.getElementById("contract-balance").innerText = `Casino Balance: ${web3.utils.fromWei(ownerBalance, "Gwei")} Gwei`;
         }
 
         async function deposit() {
@@ -328,26 +329,35 @@
         async function bet() {
             const amount = document.getElementById("betAmount").value;
             await casino.methods.bet(web3.utils.toWei(amount, "Gwei")).send({ from: userAccount });
-            listenForEvents();
             updateBalances();
         }
 
         async function listenForEvents() {
             casino.events.BetResult({}, (error, event) => {
-                if (error) return console.error("Event listening error:", error);
-
+                if (error) {
+                    console.error("Event listening error:", error);
+                    return;
+                }
                 console.log("Event received:", event); // Debugging line
 
                 const { user, amount, won } = event.returnValues;
-                document.getElementById("game-result").innerText = `User ${user} bet ${web3.utils.fromWei(amount, "Gwei")} Gwei and ${won ? "WON!" : "LOST!"}`;
+                document.getElementById("game-result").innerText =
+                    `User ${user} bet ${web3.utils.fromWei(amount, "Gwei")} Gwei and ${won ? "WON!" : "LOST!"}`;
+            })
+            .on("data", (event) => {
+                console.log("Event received:", event); // Debugging line
+
+                const { user, amount, won } = event.returnValues;
+                document.getElementById("game-result").innerText =
+                    `User ${user} bet ${web3.utils.fromWei(amount, "Gwei")} Gwei and ${won ? "WON!" : "LOST!"}`;
             });
-        }
+
+        };
 
         function showTab(tabName) {
             document.querySelectorAll(".content").forEach(tab => tab.classList.remove("active"));
             document.getElementById(tabName).classList.add("active");
         }
-        listenForEvents();
 
         connectWeb3();
     </script>
