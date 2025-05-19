@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Decentralized Casino</title>
+    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+</head>
+<body>
+    <h1>Decentralized Casino</h1>
+    <button onclick="deposit()">Deposit 0.1 ETH</button>
+    <button onclick="bet()">Bet 0.05 ETH</button>
+    <button onclick="withdraw()">Withdraw Earnings</button>
+    <p id="status"></p>
+
+    <script>
+        const contractAddress = "YOUR_SMART_CONTRACT_ADDRESS";
+        const contractABI = [/* ABI goes here */];
+
+        async function connectWeb3() {
+            if (window.ethereum) {
+                window.web3 = new Web3(window.ethereum);
+                await window.ethereum.request({ method: "eth_requestAccounts" });
+                return new window.web3.eth.Contract(contractABI, contractAddress);
+            } else {
+                alert("Please install MetaMask!");
+            }
+        }
+
+        async function deposit() {
+            const casino = await connectWeb3();
+            const accounts = await web3.eth.getAccounts();
+            await casino.methods.deposit().send({ from: accounts[0], value: web3.utils.toWei("0.1", "ether") });
+            document.getElementById("status").innerText = "Deposit successful!";
+        }
+
+        async function bet() {
+            const casino = await connectWeb3();
+            const accounts = await web3.eth.getAccounts();
+            await casino.methods.bet(web3.utils.toWei("0.05", "ether")).send({ from: accounts[0] });
+            document.getElementById("status").innerText = "Bet placed!";
+        }
+
+        async function withdraw() {
+            const casino = await connectWeb3();
+            const accounts = await web3.eth.getAccounts();
+            await casino.methods.withdraw(web3.utils.toWei("0.05", "ether")).send({ from: accounts[0] });
+            document.getElementById("status").innerText = "Withdrawal successful!";
+        }
+    </script>
+</body>
+</html>
