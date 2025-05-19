@@ -28,6 +28,45 @@
             margin-bottom: 20px;
         }
 
+        nav {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            background-color: #ffcc00;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin: 5px;
+            border-radius: 5px;
+            transition: 0.3s;
+        }
+
+        .tab:hover {
+            background-color: #e6b800;
+        }
+
+        .content {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .active {
+            display: block;
+        }
+
+        input {
+            padding: 10px;
+            margin: 10px;
+            border-radius: 5px;
+            border: none;
+            font-size: 1rem;
+            width: 200px;
+        }
+
         button {
             background-color: #ffcc00;
             border: none;
@@ -56,27 +95,58 @@
             margin-top: 15px;
         }
     </style>
+
+
 </head>
 <body>
     <h1>🎲 Decentralized Casino 🎲</h1>
 
-    <p id="account-info">Connecting...</p>
+    <nav>
+        <button class="tab" onclick="showTab('home')">Home</button>
+        <button class="tab" onclick="showTab('game')">50/50 Game</button>
+        <button class="tab" onclick="showTab('blackjack')">Blackjack</button>
+    </nav>
 
-    <button onclick="deposit()">Deposit 0.1 ETH</button>
-    <button onclick="bet()">Bet 0.05 ETH</button>
-    <button onclick="withdraw()">Withdraw Earnings</button>
+    <p id="user-balance"></p>
+    <p id="contract-balance"></p>
 
-    <div id="owner-section">
-        <h2>🏆 Owner Controls 🏆</h2>
-        <button onclick="ownerDeposit()">Owner Deposit 1 ETH</button>
-        <button onclick="ownerWithdraw()">Owner Withdraw 1 ETH</button>
+
+    <div id="home" class="content active">
+        <p id="account-info">Connecting...</p>
+        
+
+        <input type="text" id="depositAmount" placeholder="Deposit Amount (Gwei)">
+        <button onclick="deposit()">Deposit</button>
+
+        <input type="text" id="withdrawAmount" placeholder="Withdraw Amount (Gwei)">
+        <button onclick="withdraw()">Withdraw</button>
+
+        <div id="owner-section">
+            <h2>🏆 Owner Controls 🏆</h2>
+            <input type="text" id="ownerDepositAmount" placeholder="Owner Deposit (Gwei)">
+            <button onclick="ownerDeposit()">Owner Deposit</button>
+
+            <input type="text" id="ownerWithdrawAmount" placeholder="Owner Withdraw (Gwei)">
+            <button onclick="ownerWithdraw()">Owner Withdraw</button>
+        </div>
+    </div>
+
+    <div id="game" class="content">
+        <h2>🎰 50/50 Game 🎰</h2>
+        <h3>Bet any amount. You will have 50% chance to win double your bet, and 50% chance losing it.</h3>
+        <input type="text" id="betAmount" placeholder="Bet Amount (Gwei)">
+        <button onclick="bet()">Bet</button>
+        <p id="game-result"></p>
+    </div>
+
+    <div id="blackjack" class="content">
+        <h2>🃏 Blackjack (Coming Soon) 🃏</h2>
+        <p>This feature is under development.</p>
     </div>
 
     <p id="status"></p>
 
     <script>
-        // const onboarding = new MetaMaskOnboarding();
-        // onboarding.startOnboarding();
         const contractAddress = "0xA6b455c8d8D7a9c433B7A821c8d254D1b4EB5700";
         const contractABI = [
 	{
@@ -216,51 +286,68 @@
                     document.getElementById("owner-section").style.display = "block";
                 }
 
+                updateBalances();
                 listenForEvents();
             } else {
                 alert("Please install MetaMask!");
             }
         }
 
-        async function deposit() {
-            await casino.methods.deposit().send({ from: userAccount, value: web3.utils.toWei("0.1", "ether") });
-            document.getElementById("status").innerText = "Deposit successful!";
+        async function updateBalances() {
+            const userBalance = await casino.methods.balances(userAccount).call();
+            const contractBalance = await web3.eth.getBalance(contractAddress);
+
+            document.getElementById("user-balance").innerText = `Your Balance: ${web3.utils.fromWei(userBalance, "Gwei")} Gwei`;
+            document.getElementById("contract-balance").innerText = `Casino Balance: ${web3.utils.fromWei(contractBalance, "Gwei")} Gwei`;
         }
 
-        async function bet() {
-            await casino.methods.bet(web3.utils.toWei("0.05", "ether")).send({ from: userAccount });
-            document.getElementById("status").innerText = "Bet placed!";
+        async function deposit() {
+            const amount = document.getElementById("depositAmount").value;
+            await casino.methods.deposit().send({ from: userAccount, value: web3.utils.toWei(amount, "Gwei") });
+            updateBalances();
         }
 
         async function withdraw() {
-            await casino.methods.withdraw(web3.utils.toWei("0.05", "ether")).send({ from: userAccount });
-            document.getElementById("status").innerText = "Withdrawal successful!";
+            const amount = document.getElementById("withdrawAmount").value;
+            await casino.methods.withdraw(web3.utils.toWei(amount, "Gwei")).send({ from: userAccount });
+            updateBalances();
         }
 
         async function ownerDeposit() {
-            await casino.methods.ownerDeposit().send({ from: ownerAccount, value: web3.utils.toWei("1", "ether") });
-            document.getElementById("status").innerText = "Owner deposit successful!";
+            const amount = document.getElementById("ownerDepositAmount").value;
+            await casino.methods.ownerDeposit().send({ from: ownerAccount, value: web3.utils.toWei(amount, "Gwei") });
+            updateBalances();
         }
 
         async function ownerWithdraw() {
-            await casino.methods.ownerWithdraw(web3.utils.toWei("1", "ether")).send({ from: ownerAccount });
-            document.getElementById("status").innerText = "Owner withdrawal successful!";
+            const amount = document.getElementById("ownerWithdrawAmount").value;
+            await casino.methods.ownerWithdraw(web3.utils.toWei(amount, "Gwei")).send({ from: ownerAccount });
+            updateBalances();
+        }
+
+        async function bet() {
+            const amount = document.getElementById("betAmount").value;
+            await casino.methods.bet(web3.utils.toWei(amount, "Gwei")).send({ from: userAccount });
+            listenForEvents();
+            updateBalances();
         }
 
         async function listenForEvents() {
             casino.events.BetResult({}, (error, event) => {
-                if (error) {
-                    console.error("Event listening error:", error);
-                    return;
-                }
+                if (error) return console.error("Event listening error:", error);
+
+                console.log("Event received:", event); // Debugging line
 
                 const { user, amount, won } = event.returnValues;
-                let resultMessage = `User ${user} bet ${web3.utils.fromWei(amount, "ether")} ETH and `;
-                resultMessage += won ? "WON!" : "LOST!";
-                
-                document.getElementById("status").innerText = resultMessage;
+                document.getElementById("game-result").innerText = `User ${user} bet ${web3.utils.fromWei(amount, "Gwei")} Gwei and ${won ? "WON!" : "LOST!"}`;
             });
         }
+
+        function showTab(tabName) {
+            document.querySelectorAll(".content").forEach(tab => tab.classList.remove("active"));
+            document.getElementById(tabName).classList.add("active");
+        }
+        listenForEvents();
 
         connectWeb3();
     </script>
