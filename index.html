@@ -64,7 +64,7 @@
             border-radius: 5px;
             border: none;
             font-size: 1rem;
-            width: 200px;
+            width: 150px;
         }
 
         button {
@@ -90,11 +90,34 @@
             display: none;
         }
 
-        p {
-            font-size: 1.2rem;
-            margin-top: 15px;
+        .roulette-container {
+            position: relative;
+            width: 600px;
+            height: 600px;
+            margin: auto;
+            border-radius: 50%;
+            border: 12px solid #333;
+            background: radial-gradient(circle, #0a0a0a 20%, #222 80%);
         }
+
+        .number {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            line-height: 40px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 50%;
+            color: white;
+        }
+
+        .green { background-color: #28a745; }
+        .red { background-color: #dc3545; }
+        .black { background-color: #333; }
+
     </style>
+
 
 
 </head>
@@ -104,7 +127,7 @@
     <nav>
         <button class="tab" onclick="showTab('home')">Home</button>
         <button class="tab" onclick="showTab('game')">50/50 Game</button>
-        <button class="tab" onclick="showTab('blackjack')">Blackjack</button>
+        <button class="tab" onclick="showTab('roulette')">Roulette</button>
     </nav>
 
     <p id="user-balance"></p>
@@ -139,29 +162,35 @@
         <p id="game-result"></p>
     </div>
 
-    <div id="blackjack" class="content">
-        <h2>🃏 Blackjack (Coming Soon) 🃏</h2>
-        <p>This feature is under development.</p>
+    <div id="roulette" class="content">
+        <h2>🎡 European Roulette 🎡</h2>
+        <h3>0 is neither odd nor even, neither red nor black.</h3>
+        <div class="roulette-container" id="rouletteWheel"></div>
+
+        <p>Bet Amount: <input type="text" id="rouletteBetAmount" placeholder="Gwei"></p>
+
+        <p>Select Bet Type:</p>
+        <select id="betType" onchange="updateBetOptions()">
+            <option value="1">Number (0-36)</option>
+            <option value="2">Odd/Even</option>
+            <option value="3">Color (Red/Black)</option>
+        </select>
+
+        <p>Select Bet Value: 
+            <select id="betValue"></select>
+        </p>
+
+        <button onclick="rouletteBet()">Place Bet</button>
+        <p id="betResult"></p>
+
+
     </div>
 
     <p id="status"></p>
 
     <script>
-        const contractAddress = "0xFb67d681aa7bBCFA7501E17Cd7e0B76aE0c7de70";
+        const contractAddress = "0xb47e4a4e2DdfA251bD952789F0FD67efF22466F2";
         const contractABI = [
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "amount",
-				"type": "uint256"
-			}
-		],
-		"name": "bet",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
 	{
 		"inputs": [],
 		"stateMutability": "nonpayable",
@@ -193,10 +222,98 @@
 		"type": "event"
 	},
 	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "betType",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "betValue",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "winningNumber",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "winAmount",
+				"type": "uint256"
+			}
+		],
+		"name": "rouletteResult",
+		"type": "event"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "balances",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			}
+		],
+		"name": "bet",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
 		"inputs": [],
 		"name": "deposit",
 		"outputs": [],
 		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "owner",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -220,6 +337,42 @@
 		"type": "function"
 	},
 	{
+		"inputs": [],
+		"name": "randomNumber",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "betType",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "betValue",
+				"type": "uint256"
+			}
+		],
+		"name": "rouletteBet",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
 		"inputs": [
 			{
 				"internalType": "uint256",
@@ -230,38 +383,6 @@
 		"name": "withdraw",
 		"outputs": [],
 		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"name": "balances",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "owner",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
 		"type": "function"
 	}
 ];
@@ -288,6 +409,7 @@
 
                 updateBalances();
                 listenForEvents();
+                updateBetOptions();
             } else {
                 alert("Please install MetaMask!");
             }
@@ -339,19 +461,53 @@
                     return;
                 }
                 console.log("Event received:", event); // Debugging line
+                updateBalances();
 
-                const { user, amount, won } = event.returnValues;
-                document.getElementById("game-result").innerText =
-                    `User ${user} bet ${web3.utils.fromWei(amount, "Gwei")} Gwei and ${won ? "WON!" : "LOST!"}`;
+                // const { user, amount, won } = event.returnValues;
+                // document.getElementById("game-result").innerText =
+                //     `User ${user} bet ${web3.utils.fromWei(amount, "Gwei")} Gwei and ${won ? "WON!" : "LOST!"}`;
             })
             .on("data", (event) => {
-                console.log("Event received:", event); // Debugging line
 
                 const { user, amount, won } = event.returnValues;
                 document.getElementById("game-result").innerText =
                     `User ${user} bet ${web3.utils.fromWei(amount, "Gwei")} Gwei and ${won ? "WON!" : "LOST!"}`;
             });
 
+            casino.events.rouletteResult({}, (error, event) => {
+                if (error) {
+                    console.error("Event listening error:", error);
+                    return;
+                }
+                console.log("Event received:", event); // Debugging line
+                updateBalances();
+
+                // const { user, amount, won } = event.returnValues;
+                // document.getElementById("game-result").innerText =
+                //     `User ${user} bet ${web3.utils.fromWei(amount, "Gwei")} Gwei and ${won ? "WON!" : "LOST!"}`;
+            })
+            .on("data", (event) => {
+
+                let { user, amount, betType, betValue, winningNumber, winAmount } = event.returnValues;
+                if (betType == 1) {
+                    betType = "Number " + betValue;
+                } else if (betType == 2) {
+                    if (betValue == 1) {
+                        betType = "Odd";
+                    } else {
+                        betType = "Even";
+                    }
+                } else if (betType == 3) {
+                    betType = "Color " + (betValue == 1 ? "Red" : "Black");
+                }
+                if (winAmount > 0) {
+                    winAmount = "You WON " + web3.utils.fromWei(winAmount, "Gwei") + " Gwei!";
+                } else {
+                    winAmount = "You LOST!";
+                }
+                document.getElementById("betResult").innerText =
+                    `User ${user} bet ${web3.utils.fromWei(amount, "Gwei")} Gwei on ${betType} and the winning number was ${winningNumber}. You ${winAmount}`;
+            });
         };
 
         function showTab(tabName) {
@@ -359,7 +515,69 @@
             document.getElementById(tabName).classList.add("active");
         }
 
+        function generateRouletteWheel() {
+            const numbers = [
+                { num: 0, color: "green" }, { num: 32, color: "red" }, { num: 15, color: "black" }, { num: 19, color: "red" },
+                { num: 4, color: "black" }, { num: 21, color: "red" }, { num: 2, color: "black" }, { num: 25, color: "red" },
+                { num: 17, color: "black" }, { num: 34, color: "red" }, { num: 6, color: "black" }, { num: 27, color: "red" },
+                { num: 13, color: "black" }, { num: 36, color: "red" }, { num: 11, color: "black" }, { num: 30, color: "red" },
+                { num: 8, color: "black" }, { num: 23, color: "red" }, { num: 10, color: "black" }, { num: 5, color: "red" },
+                { num: 24, color: "black" }, { num: 16, color: "red" }, { num: 33, color: "black" }, { num: 1, color: "red" },
+                { num: 20, color: "black" }, { num: 14, color: "red" }, { num: 31, color: "black" }, { num: 9, color: "red" },
+                { num: 22, color: "black" }, { num: 18, color: "red" }, { num: 29, color: "black" }, { num: 7, color: "red" },
+                { num: 28, color: "black" }, { num: 12, color: "red" }, { num: 35, color: "black" }, { num: 3, color: "red" },
+                { num: 26, color: "black" }
+            ];
+            const rouletteWheel = document.getElementById("rouletteWheel");
+            numbers.forEach((item, index) => {
+                let angle = (360 / numbers.length) * index;
+                let x = 280 + 250 * Math.cos(angle * (Math.PI / 180));
+                let y = 280 + 250 * Math.sin(angle * (Math.PI / 180));
+
+                let numberDiv = document.createElement("div");
+                numberDiv.className = `number ${item.color}`;
+                numberDiv.style.left = `${x}px`;
+                numberDiv.style.top = `${y}px`;
+                numberDiv.innerHTML = item.num;
+                rouletteWheel.appendChild(numberDiv);
+            });
+        }
+
+        function updateBetOptions() {
+            const betType = document.getElementById("betType").value;
+            const betValueDropdown = document.getElementById("betValue");
+            betValueDropdown.innerHTML = "";
+
+            if (betType == "1") {
+                for (let i = 0; i <= 36; i++) {
+                    let option = new Option(i, i);
+                    betValueDropdown.add(option);
+                }
+            } else if (betType == "2") {
+                betValueDropdown.add(new Option("Odd", 1));
+                betValueDropdown.add(new Option("Even", 0));
+            } else if (betType == "3") {
+                betValueDropdown.add(new Option("Red", 1));
+                betValueDropdown.add(new Option("Black", 0));
+            }
+        }
+
+        async function rouletteBet() {
+            const amount = document.getElementById("rouletteBetAmount").value;
+            const betType = document.getElementById("betType").value;
+            const betValue = document.getElementById("betValue").value;
+
+            await casino.methods.rouletteBet(web3.utils.toWei(amount, "Gwei"), betType, betValue)
+                .send({ from: userAccount });
+            updateBalances();
+        }
+
+
+
+
+
         connectWeb3();
+        generateRouletteWheel();
     </script>
 </body>
 </html>
